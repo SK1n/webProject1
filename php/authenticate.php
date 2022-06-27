@@ -17,7 +17,12 @@ if ( !isset($_POST['email'], $_POST['pwd']) ) {
 	// Could not get the data that should have been sent.
 	exit('Please fill both the email and password fields!');
 }
-
+$recaptcha = $_POST['g-recaptcha-response'];
+$secret_key = '6Lcq42QgAAAAABNz59-T6ejvvcviNVIyx2J8tBvr';
+$url = 'https://www.google.com/recaptcha/api/siteverify?secret='. $secret_key . '&response=' . $recaptcha;
+$response = file_get_contents($url);
+$response = json_decode($response);
+if ($response->success == true) {
 // Prepare our SQL, preparing the SQL statement will prevent SQL injection.
 if ($stmt = $con->prepare('SELECT id, password FROM accounts WHERE email = ?')) {
 	// Bind parameters (s = string, i = int, b = blob, etc), in our case the email is a string so we use "s"
@@ -38,6 +43,10 @@ if ($stmt = $con->prepare('SELECT id, password FROM accounts WHERE email = ?')) 
             $_SESSION['loggedin'] = TRUE;
             $_SESSION['name'] = $_POST['email'];
             $_SESSION['id'] = $id;
+            if($_POST['remember'] == 1 || $_POST['remember'] == "on") {
+                setcookie('name', $_POST['email'],time() + (86400 * 30), "/");
+                setcookie('pwd', $_POST['pwd'] ,time() + (86400 * 30), "/");
+            }
             header('Location: home.php');
         } else {
             // Incorrect password
@@ -49,4 +58,8 @@ if ($stmt = $con->prepare('SELECT id, password FROM accounts WHERE email = ?')) 
     }
 	$stmt->close();
 }
+} else {
+    echo '<script>alert("Error in Google reCAPTACHA"); window.location.href = "../index.php";</script>';
+}
+
 ?>
